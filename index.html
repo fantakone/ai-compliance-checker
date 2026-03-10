@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Compliance Checker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --border: #e8e4dc;
+  --text: #1a1714;
+  --muted: #8a847a;
+  --accent: #c84b2f;
+  --accent2: #2a5c45;
+  --critical: #c84b2f;
+  --high: #d4742a;
+  --medium: #c9a227;
+  --low: #4a7c59;
+  --ok: #2a5c45;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  min-height: 100vh;
+}
+
+/* GRAIN OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ─── HEADER ─── */
+header {
+  padding: 24px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+}
+.logo span { color: var(--accent); }
+
+.header-right { display: flex; gap: 12px; align-items: center; }
+
+.lang-toggle {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.lang-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Syne', sans-serif;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.lang-btn.active {
+  background: var(--text);
+  color: white;
+}
+
+/* ─── HERO ─── */
+.hero {
+  padding: 80px 48px 60px;
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 20px;
+}
+
+.hero h1 em {
+  font-style: normal;
+  color: var(--accent);
+  position: relative;
+}
+
+.hero p {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 560px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+}
+
+/* API KEY INPUT */
+.api-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 560px;
+  margin-bottom: 16px;
+}
+.api-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: block;
+}
+.api-input-row { display: flex; gap: 10px; }
+.api-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.api-input:focus { border-color: var(--accent); }
+.api-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.api-hint a { color: var(--accent); }
+
+/* ─── FRAMEWORKS GRID ─── */
+.section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 48px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 28px;
+}
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.section-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.frameworks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+.fw-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.fw-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.fw-card.selected {
+  border-color: var(--accent);
+  background: #fdf5f3;
+}
+.fw-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 22px;
+  height: 22px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.fw-icon { font-size: 28px; margin-bottom: 12px; }
+.fw-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.fw-count { font-size: 12px; color: var(--muted); }
+
+/* ─── QUESTIONNAIRE ─── */
+#questionnaire { display: none; }
+.questionnaire-header {
+  background: var(--text);
+  color: white;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.questionnaire-header h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.questionnaire-header p { font-size: 13px; opacity: 0.6; margin-top: 4px; }
+
+.progress-bar-wrap {
+  width: 200px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: white;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.questions-list { display: flex; flex-direction: column; gap: 16px; }
+
+.question-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  transition: border-color 0.2s;
+  animation: slideIn 0.3s ease forwards;
+  opacity: 0;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.question-card.answered { border-color: var(--accent2); }
+
+.q-category {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.q-text {
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+.q-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.q-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text);
+}
+.q-btn:hover { border-color: var(--accent); }
+.q-btn.selected-oui    { background: #edf7f1; border-color: var(--ok);      color: var(--ok); }
+.q-btn.selected-partiel { background: #fef9ec; border-color: var(--medium); color: var(--medium); }
+.q-btn.selected-non    { background: #fdf0ee; border-color: var(--critical); color: var(--critical); }
+.q-btn.selected-na     { background: var(--bg); border-color: var(--muted); color: var(--muted); }
+
+.submit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.btn-primary {
+  padding: 14px 32px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+.btn-primary:hover { background: #a83e25; transform: translateY(-1px); }
+.btn-primary:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+.btn-ghost {
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--muted);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+/* ─── LOADING ─── */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(247,245,240,0.9);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.loading-overlay.active { display: flex; }
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.loading-sub { font-size: 13px; color: var(--muted); }
+
+/* ─── RESULTS ─── */
+#results { display: none; }
+
+.results-header {
+  margin-bottom: 40px;
+}
+.results-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-bottom: 24px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.results-back:hover { color: var(--text); }
+
+.results-hero {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.score-widget {
+  background: var(--text);
+  color: white;
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  min-width: 180px;
+  flex-shrink: 0;
+}
+.score-big {
+  font-family: 'Syne', sans-serif;
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.score-label { font-size: 11px; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; }
+.score-niveau {
+  margin-top: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.results-summary {
+  flex: 1;
+  min-width: 280px;
+}
+.results-fw-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+}
+.results-resume {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.strengths {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.strength-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--ok);
+  font-weight: 500;
+}
+.strength-item::before { content: '↗'; font-size: 16px; }
+
+/* GAPS */
+.gaps-section { margin-top: 48px; }
+.gaps-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+
+.gap-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid;
+  border-radius: 0 12px 12px 0;
+  padding: 20px 24px;
+}
+.gap-card.sev-critique, .gap-card.sev-critical  { border-left-color: var(--critical); }
+.gap-card.sev-élevée,   .gap-card.sev-high      { border-left-color: var(--high); }
+.gap-card.sev-moyenne,  .gap-card.sev-medium     { border-left-color: var(--medium); }
+.gap-card.sev-faible,   .gap-card.sev-low        { border-left-color: var(--low); }
+
+.gap-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.gap-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+.gap-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.gap-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+}
+.badge-critique, .badge-critical { background: #fdf0ee; color: var(--critical); }
+.badge-élevée,   .badge-high     { background: #fdf5ee; color: var(--high); }
+.badge-moyenne,  .badge-medium   { background: #fefaec; color: var(--medium); }
+.badge-faible,   .badge-low      { background: #edf7f1; color: var(--low); }
+.badge-delai { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+.gap-desc { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+.gap-reco {
+  font-size: 14px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent2);
+  color: var(--text);
+  line-height: 1.6;
+}
+.gap-reco strong { color: var(--accent2); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px; font-family: 'Syne', sans-serif; }
+
+/* ACTION PLAN */
+.plan-section { margin-top: 48px; }
+.plan-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-top: 20px;
+}
+.plan-table th {
+  padding: 14px 20px;
+  text-align: left;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.plan-table td {
+  padding: 14px 20px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.5;
+}
+.plan-table tr:last-child td { border-bottom: none; }
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  background: var(--accent);
+  color: white;
+}
+
+/* EXPORT BTN */
+.export-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+}
+
+/* ─── FOOTER ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+footer a { color: var(--accent); text-decoration: none; }
+
+@media (max-width: 768px) {
+  header, .hero, .section { padding-left: 20px; padding-right: 20px; }
+  .hero h1 { font-size: 36px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Analyse en cours...</div>
+  <div class="loading-sub" id="loading-sub">Claude analyse vos réponses</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">compliance<span>.</span>ai</div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-fr" onclick="setLang('fr')">FR</button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+</header>
+
+<!-- HOME -->
+<div id="home">
+  <div class="hero">
+    <div class="hero-tag">✦ Powered by Claude</div>
+    <h1>Évaluez votre<br><em>conformité réglementaire</em><br>en minutes</h1>
+    <p id="hero-desc">Répondez à nos questionnaires guidés. Claude analyse vos réponses et génère un rapport de gaps personnalisé avec un plan d'action priorisé.</p>
+
+    <div class="api-section">
+      <label class="api-label" id="api-label">🔑 Clé API Anthropic</label>
+      <div class="api-input-row">
+        <input type="password" class="api-input" id="api-key" placeholder="sk-ant-..." />
+      </div>
+      <div class="api-hint" id="api-hint">
+        Obtenez votre clé sur <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Elle n'est jamais stockée.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title" id="fw-title">Choisissez un référentiel</div>
+        <div class="section-sub" id="fw-sub">Sélectionnez le cadre réglementaire à évaluer</div>
+      </div>
+    </div>
+
+    <div class="frameworks-grid" id="frameworks-grid">
+      <!-- populated by JS -->
+    </div>
+
+    <button class="btn-primary" id="start-btn" disabled onclick="startAssessment()" style="min-width:200px">
+      <span id="start-btn-text">Commencer l'évaluation →</span>
+    </button>
+  </div>
+</div>
+
+<!-- QUESTIONNAIRE -->
+<div id="questionnaire">
+  <div class="section" style="padding-top:40px">
+    <div class="questionnaire-header">
+      <div>
+        <h2 id="q-title">Questionnaire</h2>
+        <p id="q-subtitle">Répondez à chaque question</p>
+      </div>
+      <div>
+        <div style="font-size:11px;opacity:0.6;text-align:right;margin-bottom:6px" id="q-progress-text">0 / 0 réponses</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="questions-list" id="questions-list"></div>
+
+    <div class="submit-row">
+      <button class="btn-ghost" onclick="backToHome()" id="back-btn">← Retour</button>
+      <button class="btn-primary" id="analyze-btn" onclick="runAnalysis()" disabled>
+        <span id="analyze-btn-text">Analyser avec Claude →</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results">
+  <div class="section" style="padding-top:40px">
+    <div class="results-header">
+      <div class="results-back" onclick="backToHome()">← <span id="back-label">Nouvelle évaluation</span></div>
+
+      <div class="results-hero">
+        <div class="score-widget">
+          <div class="score-big" id="res-score">--</div>
+          <div class="score-label">Score</div>
+          <div class="score-niveau" id="res-niveau">--</div>
+        </div>
+        <div class="results-summary">
+          <div class="results-fw-name" id="res-fw-name">--</div>
+          <div class="results-resume" id="res-resume">--</div>
+          <div class="strengths" id="res-strengths"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gaps-section">
+      <div class="section-title" id="gaps-title">Gaps identifiés</div>
+      <div class="gaps-grid" id="gaps-grid"></div>
+    </div>
+
+    <div class="plan-section">
+      <div class="section-title" id="plan-title">Plan d'action</div>
+      <table class="plan-table">
+        <thead>
+          <tr>
+            <th id="plan-th-prio">Priorité</th>
+            <th id="plan-th-action">Action</th>
+            <th id="plan-th-delai">Délai</th>
+          </tr>
+        </thead>
+        <tbody id="plan-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="export-row">
+      <button class="btn-primary" onclick="exportJSON()" id="export-btn">⬇ Exporter JSON</button>
+      <button class="btn-ghost" onclick="backToHome()" id="new-eval-btn">Nouvelle évaluation</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>compliance.ai — <a href="https://fantakone.com">Fanta Koné</a></span>
+  <span id="footer-powered">Powered by Claude (Anthropic)</span>
+</footer>
+
+<script>
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+const API_BASE = window.location.origin;
+let lang = 'fr';
+let selectedFramework = null;
+let currentQuestions = [];
+let answers = {};
+let lastResult = null;
+
+const i18n = {
+  fr: {
+    heroDesc: "Répondez à nos questionnaires guidés. Claude analyse vos réponses et génère un rapport de gaps personnalisé avec un plan d'action priorisé.",
+    apiLabel: "🔑 Clé API Anthropic",
+    apiHint: 'Obtenez votre clé sur <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Elle n\'est jamais stockée.',
+    fwTitle: "Choisissez un référentiel",
+    fwSub: "Sélectionnez le cadre réglementaire à évaluer",
+    startBtn: "Commencer l'évaluation →",
+    backBtn: "← Retour",
+    analyzeBtn: "Analyser avec Claude →",
+    analyzing: "Analyse en cours...",
+    analyzingSub: "Claude analyse vos réponses",
+    progressText: (a, t) => `${a} / ${t} réponses`,
+    qSub: "Répondez à chaque question pour une analyse précise",
+    oui: "Oui", non: "Non", partiel: "Partiel", na: "N/A",
+    gapsTitle: "Gaps identifiés",
+    planTitle: "Plan d'action",
+    planPrio: "Priorité", planAction: "Action", planDelai: "Délai",
+    recoLabel: "Recommandation",
+    backLabel: "Nouvelle évaluation",
+    exportBtn: "⬇ Exporter JSON",
+    newEval: "Nouvelle évaluation",
+    noGaps: "✅ Aucun gap critique identifié — excellente posture !",
+  },
+  en: {
+    heroDesc: "Answer our guided questionnaires. Claude analyses your responses and generates a personalised gap report with a prioritised action plan.",
+    apiLabel: "🔑 Anthropic API Key",
+    apiHint: 'Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Never stored.',
+    fwTitle: "Choose a framework",
+    fwSub: "Select the regulatory framework to assess",
+    startBtn: "Start assessment →",
+    backBtn: "← Back",
+    analyzeBtn: "Analyse with Claude →",
+    analyzing: "Analysing...",
+    analyzingSub: "Claude is analysing your answers",
+    progressText: (a, t) => `${a} / ${t} answers`,
+    qSub: "Answer each question for an accurate analysis",
+    oui: "Yes", non: "No", partiel: "Partial", na: "N/A",
+    gapsTitle: "Identified gaps",
+    planTitle: "Action plan",
+    planPrio: "Priority", planAction: "Action", planDelai: "Timeline",
+    recoLabel: "Recommendation",
+    backLabel: "New assessment",
+    exportBtn: "⬇ Export JSON",
+    newEval: "New assessment",
+    noGaps: "✅ No critical gaps identified — excellent posture!",
+  }
+};
+
+// ─────────────────────────────────────────
+// LANG
+// ─────────────────────────────────────────
+function setLang(l) {
+  lang = l;
+  document.getElementById('btn-fr').classList.toggle('active', l === 'fr');
+  document.getElementById('btn-en').classList.toggle('active', l === 'en');
+  document.documentElement.lang = l;
+  applyI18n();
+  loadFrameworks();
+}
+
+function applyI18n() {
+  const t = i18n[lang];
+  document.getElementById('hero-desc').textContent = t.heroDesc;
+  document.getElementById('api-label').textContent = t.apiLabel;
+  document.getElementById('api-hint').innerHTML = t.apiHint;
+  document.getElementById('fw-title').textContent = t.fwTitle;
+  document.getElementById('fw-sub').textContent = t.fwSub;
+  document.getElementById('start-btn-text').textContent = t.startBtn;
+  document.getElementById('back-btn').textContent = t.backBtn;
+  document.getElementById('analyze-btn-text').textContent = t.analyzeBtn;
+  document.getElementById('back-label').textContent = t.backLabel;
+  document.getElementById('export-btn').textContent = t.exportBtn;
+  document.getElementById('new-eval-btn').textContent = t.newEval;
+  document.getElementById('plan-th-prio').textContent = t.planPrio;
+  document.getElementById('plan-th-action').textContent = t.planAction;
+  document.getElementById('plan-th-delai').textContent = t.planDelai;
+  document.getElementById('gaps-title').textContent = t.gapsTitle;
+  document.getElementById('plan-title').textContent = t.planTitle;
+}
+
+// ─────────────────────────────────────────
+// LOAD FRAMEWORKS
+// ─────────────────────────────────────────
+async function loadFrameworks() {
+  try {
+    const res = await fetch(`${API_BASE}/api/frameworks?lang=${lang}`);
+    const frameworks = await res.json();
+    renderFrameworks(frameworks);
+  } catch(e) {
+    document.getElementById('frameworks-grid').innerHTML =
+      '<p style="color:var(--critical);font-size:13px">⚠ Cannot reach API. Make sure the backend is running.</p>';
+  }
+}
+
+function renderFrameworks(frameworks) {
+  const grid = document.getElementById('frameworks-grid');
+  grid.innerHTML = '';
+  frameworks.forEach(fw => {
+    const card = document.createElement('div');
+    card.className = 'fw-card' + (selectedFramework === fw.id ? ' selected' : '');
+    card.dataset.id = fw.id;
+    card.innerHTML = `
+      <div class="fw-icon">${fw.icon}</div>
+      <div class="fw-name">${fw.name}</div>
+      <div class="fw-count">${fw.question_count} questions</div>`;
+    card.onclick = () => selectFramework(fw.id);
+    grid.appendChild(card);
+  });
+}
+
+function selectFramework(id) {
+  selectedFramework = id;
+  document.querySelectorAll('.fw-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.id === id);
+  });
+  const apiKey = document.getElementById('api-key').value.trim();
+  document.getElementById('start-btn').disabled = !apiKey;
+}
+
+document.getElementById('api-key').addEventListener('input', () => {
+  const apiKey = document.getElementById('api-key').value.trim();
+  document.getElementById('start-btn').disabled = !apiKey || !selectedFramework;
+});
+
+// ─────────────────────────────────────────
+// START ASSESSMENT
+// ─────────────────────────────────────────
+async function startAssessment() {
+  if (!selectedFramework) return;
+
+  const res = await fetch(`${API_BASE}/api/questions/${selectedFramework}?lang=${lang}`);
+  const data = await res.json();
+  currentQuestions = data.questions;
+  answers = {};
+
+  document.getElementById('q-title').textContent = data.framework_name;
+  document.getElementById('q-subtitle').textContent = i18n[lang].qSub;
+
+  renderQuestions();
+  showSection('questionnaire');
+}
+
+function renderQuestions() {
+  const t = i18n[lang];
+  const list = document.getElementById('questions-list');
+  list.innerHTML = '';
+
+  currentQuestions.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `qcard-${q.id}`;
+    card.style.animationDelay = `${i * 0.05}s`;
+
+    card.innerHTML = `
+      <div class="q-category">${q.category}</div>
+      <div class="q-text">${i + 1}. ${q.text}</div>
+      <div class="q-options">
+        ${['oui','partiel','non','na'].map(v => `
+          <button class="q-btn" id="btn-${q.id}-${v}" onclick="answer('${q.id}','${v}')">
+            ${t[v]}
+          </button>`).join('')}
+      </div>`;
+    list.appendChild(card);
+  });
+
+  updateProgress();
+}
+
+function answer(qid, value) {
+  answers[qid] = value;
+
+  ['oui','partiel','non','na'].forEach(v => {
+    const btn = document.getElementById(`btn-${qid}-${v}`);
+    if (btn) btn.className = 'q-btn' + (v === value ? ` selected-${v}` : '');
+  });
+
+  const card = document.getElementById(`qcard-${qid}`);
+  if (card) card.classList.add('answered');
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = currentQuestions.length;
+  const answered = Object.keys(answers).length;
+  const pct = total ? (answered / total) * 100 : 0;
+
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('q-progress-text').textContent = i18n[lang].progressText(answered, total);
+  document.getElementById('analyze-btn').disabled = answered < total;
+}
+
+// ─────────────────────────────────────────
+// ANALYSIS
+// ─────────────────────────────────────────
+async function runAnalysis() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey) { alert('Please enter your Anthropic API key'); return; }
+
+  const t = i18n[lang];
+  document.getElementById('loading-text').textContent = t.analyzing;
+  document.getElementById('loading-sub').textContent = t.analyzingSub;
+  document.getElementById('loading').classList.add('active');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/assess`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        framework_id: selectedFramework,
+        answers: answers,
+        lang: lang,
+        api_key: apiKey
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Analysis failed');
+    }
+
+    lastResult = await res.json();
+    renderResults(lastResult);
+    showSection('results');
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    document.getElementById('loading').classList.remove('active');
+  }
+}
+
+// ─────────────────────────────────────────
+// RENDER RESULTS
+// ─────────────────────────────────────────
+function renderResults(data) {
+  const t = i18n[lang];
+  const score = data.score || 0;
+  const scoreColor = score >= 75 ? '#2a5c45' : score >= 50 ? '#c9a227' : '#c84b2f';
+  const niveauBg   = score >= 75 ? '#edf7f1' : score >= 50 ? '#fefaec' : '#fdf0ee';
+
+  document.getElementById('res-score').textContent = score;
+  document.getElementById('res-score').style.color = scoreColor;
+  document.getElementById('res-niveau').textContent = data.niveau || '';
+  document.getElementById('res-niveau').style.background = niveauBg;
+  document.getElementById('res-niveau').style.color = scoreColor;
+  document.getElementById('res-fw-name').textContent = data.framework_name || '';
+  document.getElementById('res-resume').textContent = data.resume || '';
+
+  // Strengths
+  const strengthsEl = document.getElementById('res-strengths');
+  strengthsEl.innerHTML = '';
+  (data.points_forts || []).forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'strength-item';
+    div.textContent = s;
+    strengthsEl.appendChild(div);
+  });
+
+  // Gaps
+  const gapsGrid = document.getElementById('gaps-grid');
+  gapsGrid.innerHTML = '';
+  const gaps = data.gaps || [];
+
+  if (gaps.length === 0) {
+    gapsGrid.innerHTML = `<div style="padding:24px;font-size:15px;color:var(--ok)">${t.noGaps}</div>`;
+  } else {
+    gaps.forEach(gap => {
+      const sevClass = 'sev-' + (gap.severite || '').toLowerCase();
+      const badgeClass = 'badge-' + (gap.severite || '').toLowerCase();
+      const card = document.createElement('div');
+      card.className = `gap-card ${sevClass}`;
+      card.innerHTML = `
+        <div class="gap-header">
+          <div class="gap-title">${gap.titre || ''}</div>
+          <div class="gap-badges">
+            <span class="gap-badge ${badgeClass}">${gap.severite || ''}</span>
+            <span class="gap-badge badge-delai">${gap.delai || ''}</span>
+          </div>
+        </div>
+        <div class="gap-desc">${gap.description || ''}</div>
+        <div class="gap-reco">
+          <strong>${t.recoLabel}</strong>
+          ${gap.recommandation || ''}
+        </div>`;
+      gapsGrid.appendChild(card);
+    });
+  }
+
+  // Action plan
+  const tbody = document.getElementById('plan-tbody');
+  tbody.innerHTML = '';
+  (data.plan_action || []).forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="priority-badge">${item.priorite || ''}</span></td>
+      <td>${item.action || ''}</td>
+      <td style="color:var(--muted);white-space:nowrap">${item.delai || ''}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────
+function showSection(id) {
+  ['home','questionnaire','results'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function backToHome() {
+  showSection('home');
+  selectedFramework = null;
+  document.querySelectorAll('.fw-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('start-btn').disabled = true;
+}
+
+// ─────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────
+function exportJSON() {
+  if (!lastResult) return;
+  const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `compliance-${lastResult.framework_id}-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+showSection('home');
+applyI18n();
+loadFrameworks();
+</script>
+</body>
+</html>
